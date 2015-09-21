@@ -45,6 +45,7 @@ get_blue_neighbor(unsigned r, unsigned c)
 	return (BLUE(r, c));
 }
 
+/* Draw a single "box" (one '*' in the "blueprint") */
 static void
 drawbox(unsigned row, unsigned col)
 {
@@ -52,12 +53,14 @@ drawbox(unsigned row, unsigned col)
 
 	nl = nr = nu = nd = ndl = ndr = false;
 
+	/* Special drawing for doors and windows */
 	if (BLUE(row, col) == 'h') {
 		OUT(row, col, 1, 1) = '|';
 		OUT(row, col, 1, 3) = '|';
 	} else if (BLUE(row, col) == 'o')
 		OUT(row, col, 1, 2) = 'o';
 
+	/* Box corners and walls depend on neighboring squares */
 	nl = (get_blue_neighbor(row, col - 1) != ' ');
 	nr = (get_blue_neighbor(row, col + 1) != ' ');
 	nu = (get_blue_neighbor(row - 1, col) != ' ');
@@ -102,6 +105,10 @@ drawbox(unsigned row, unsigned col)
 	}
 }
 
+/*
+ * Draw a single steeple above the point on the roof, (row, col), of width
+ * rsegw.
+ */
 static void
 drawroof(unsigned col, unsigned row, unsigned rsegw)
 {
@@ -119,9 +126,11 @@ draw_ascii(void)
 {
 	unsigned i, j, h;
 
+	/* Single walls are shared, boxes are actually 4x2. */
 	wido = 4 * blue_width + 1;
 	height = 2 * blue_height + 1 + 2 * blue_width;
 
+	/* Pick a ground-floor location for the door. */
 	h = random() % blue_width;
 	for (i = 0; h != 0;) {
 		if (BLUE(blue_height - 1, i) != ' ') {
@@ -133,6 +142,7 @@ draw_ascii(void)
 	}
 	BLUE(blue_height - 1, i) = 'h';
 
+	/* Fill in windows randomly */
 	for (i = 0; i < blue_height; i++) {
 		for (j = 0; j < blue_width; j++) {
 			if (BLUE(i, j) != ' ' && BLUE(i, j) != 'h')
@@ -141,10 +151,16 @@ draw_ascii(void)
 		}
 	}
 
-	//print_ascii(inpp, blue_height, blue_width);
+#if 0
+	/* Print out our modified blueprint. */
+	print_ascii(inpp, blue_height, blue_width);
+#endif
 
+	/*
+	 * Draw every box in the building.  While we're here, find the highest
+	 * boxes across the building (the roof)
+	 */
 	memset(roofs, 0xff, sizeof(roofs));
-
 	for (i = 0; i < blue_height; i++) {
 		for (j = 0; j < blue_width; j++) {
 			if (BLUE(i, j) == ' ')
@@ -156,6 +172,10 @@ draw_ascii(void)
 		}
 	}
 
+	/*
+	 * Finally, look for 'runs' of level roof (which will share a single
+	 * steeple) and draw a steeple for each segment.
+	 */
 	j = 0;
 	h = 0;
 	for (i = 0; i < blue_width; i++) {
@@ -182,6 +202,10 @@ parse_input(void)
 	unsigned i, j;
 	char *inp;
 
+	/*
+	 * Read through the input once just to determine the width of the
+	 * blueprint.
+	 */
 	inp = strchr(full_input, '\n') + 1;
 	for (i = 0; i < blue_height; i++) {
 		char *next;
@@ -192,7 +216,7 @@ parse_input(void)
 		inp = next + 1;
 	}
 
-	/* Rewind... */
+	/* Rewind and read into our 2D inpp array. */
 	inp = strchr(full_input, '\n') + 1;
 	for (i = 0; i < blue_height; i++) {
 		for (j = 0; j < blue_width && *inp != '\n'; j++) {
